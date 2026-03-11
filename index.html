@@ -198,29 +198,93 @@ input:focus,select:focus,.field:focus,textarea:focus{border-color:var(--accent);
 @media (max-width:1120px){.row{grid-template-columns:1fr .8fr .8fr .8fr}.hide-md{display:none}.cal,.charts{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:920px){.app{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--line)}.kgrid{grid-template-columns:1fr}.panel{min-height:auto}}
 @media (max-width:640px){main{padding:12px}.row{grid-template-columns:1fr}.hide-sm{display:none}.fg{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.ctop{grid-template-columns:auto 1fr}.cact{grid-column:1/-1;justify-content:flex-start}}
-.auth-screen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 10% 10%,rgba(233,120,66,.2),transparent 28%),radial-gradient(circle at 90% 90%,rgba(13,122,132,.23),transparent 30%),var(--bg);background-size:180% 180%;animation:bgDrift 26s ease-in-out infinite}.auth-screen.hidden{display:none}
-.auth-card{background:var(--surface);border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:var(--shadow);border:1px solid var(--line)}
-.auth-brand{text-align:center;margin-bottom:28px}.auth-brand .logo{width:56px;height:56px;margin:0 auto 12px;font-size:1.3rem}.auth-brand h1{font-size:1.5rem;margin:0 0 4px;color:var(--text)}.auth-brand p{color:var(--muted);font-size:.85rem;margin:0}
-.auth-field{margin-bottom:16px}.auth-field label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
-.auth-field input{width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:.95rem;font-family:inherit;outline:none;transition:border-color .2s}.auth-field input:focus{border-color:var(--accent)}
-.auth-card .btn.primary{width:100%;padding:12px;font-size:1rem;margin-top:8px}
-.auth-toggle{text-align:center;margin-top:16px;font-size:.85rem;color:var(--muted)}.auth-toggle a{color:var(--accent);text-decoration:none;font-weight:600;cursor:pointer}.auth-toggle a:hover{text-decoration:underline}
-.auth-error{color:var(--warn);font-size:.84rem;text-align:center;margin-top:12px;min-height:1.2em}
+.auth-screen{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 10% 10%,rgba(233,120,66,.2),transparent 28%),radial-gradient(circle at 90% 90%,rgba(13,122,132,.23),transparent 30%),var(--bg);background-size:180% 180%;animation:bgDrift 26s ease-in-out infinite;overflow:hidden;isolation:isolate}.auth-screen.hidden{display:none}
+.auth-screen::before,.auth-screen::after{content:"";position:absolute;inset:auto;pointer-events:none;z-index:0;border-radius:999px;filter:blur(10px)}
+.auth-screen::before{width:42vw;height:42vw;min-width:280px;min-height:280px;top:-10vw;left:-8vw;background:radial-gradient(circle,var(--glow1),transparent 68%);animation:authOrbA 16s ease-in-out infinite}
+.auth-screen::after{width:38vw;height:38vw;min-width:260px;min-height:260px;right:-10vw;bottom:-12vw;background:radial-gradient(circle,var(--glow2),transparent 70%);animation:authOrbB 18s ease-in-out infinite}
+.auth-shell{position:relative;z-index:1;width:min(1040px,100%);display:grid;grid-template-columns:minmax(0,1.1fr) minmax(340px,430px);gap:18px;align-items:stretch}
+.auth-hero,.auth-card{position:relative;overflow:hidden;border:1px solid var(--line);background:color-mix(in oklab,var(--surface) 88%,white 12%);box-shadow:var(--shadow)}
+.auth-hero{padding:34px;border-radius:28px;min-height:560px;display:grid;align-content:space-between;background:linear-gradient(150deg,color-mix(in oklab,var(--surface) 84%,white 16%),color-mix(in oklab,var(--surface) 92%,var(--accent) 8%));animation:authHeroIn .72s cubic-bezier(.2,.86,.2,1) both}
+.auth-hero::before,.auth-card::before{content:"";position:absolute;inset:-1px;border-radius:inherit;background:linear-gradient(130deg,color-mix(in oklab,var(--glow1) 86%,transparent),color-mix(in oklab,var(--glow2) 88%,transparent),color-mix(in oklab,var(--glow3) 86%,transparent),color-mix(in oklab,var(--accent2) 50%,transparent),color-mix(in oklab,var(--glow1) 86%,transparent));background-size:300% 300%;opacity:.8;animation:boxChromaticBorder 12s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;padding:1px;pointer-events:none}
+.auth-hero::after{content:"";position:absolute;inset:18% auto auto 58%;width:210px;height:210px;background:radial-gradient(circle,color-mix(in oklab,var(--accent2) 24%,transparent),transparent 72%);filter:blur(12px);animation:authPulse 8s ease-in-out infinite}
+.auth-copy{display:grid;gap:18px;max-width:420px}
+.auth-kicker{display:inline-flex;align-items:center;gap:8px;width:max-content;border:1px solid color-mix(in oklab,var(--accent) 35%,var(--line));border-radius:999px;padding:8px 12px;background:color-mix(in oklab,var(--accent) 10%,var(--surface));font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);animation:fadeLift .5s .06s cubic-bezier(.2,.86,.2,1) both}
+.auth-copy h2{margin:0;font-size:clamp(2rem,4vw,3.6rem);line-height:.96;letter-spacing:-.05em;animation:fadeLift .62s .12s cubic-bezier(.2,.86,.2,1) both}
+.auth-copy p{margin:0;font-size:.96rem;line-height:1.6;color:var(--muted);animation:fadeLift .62s .2s cubic-bezier(.2,.86,.2,1) both}
+.auth-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;animation:fadeLift .68s .28s cubic-bezier(.2,.86,.2,1) both}
+.auth-metric{padding:14px 14px 12px;border:1px solid color-mix(in oklab,var(--line) 88%,white 12%);border-radius:18px;background:color-mix(in oklab,var(--surface) 78%,var(--bg));backdrop-filter:blur(6px)}
+.auth-metric b{display:block;font-size:1.35rem;margin-bottom:4px}
+.auth-metric span{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.auth-preview{display:grid;gap:10px;align-self:end;animation:fadeLift .72s .36s cubic-bezier(.2,.86,.2,1) both}
+.auth-track{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:18px;border:1px solid color-mix(in oklab,var(--line) 85%,white 15%);background:color-mix(in oklab,var(--surface) 78%,var(--bg));transform-origin:center left;animation:authTrackFloat 6s ease-in-out infinite}
+.auth-track:nth-child(2){animation-delay:-2s}.auth-track:nth-child(3){animation-delay:-4s}
+.auth-track .pulse{width:11px;height:11px;border-radius:999px;background:linear-gradient(140deg,var(--accent),var(--accent2));box-shadow:0 0 0 0 color-mix(in oklab,var(--accent) 28%,transparent);animation:authDotPulse 2.4s ease-in-out infinite}
+.auth-track strong{display:block;font-size:.9rem}.auth-track small{color:var(--muted)}
+.auth-card{border-radius:28px;padding:28px 28px 26px;width:100%;transform-origin:center;animation:authCardIn .74s cubic-bezier(.18,.9,.2,1) both}
+.auth-screen.mode-register .auth-card{animation-name:authCardSwap}.auth-screen.mode-register .auth-hero{animation-name:authHeroShift}
+.auth-card::after{content:"";position:absolute;inset:20% -30% auto auto;width:180px;height:180px;background:radial-gradient(circle,color-mix(in oklab,var(--accent) 20%,transparent),transparent 70%);filter:blur(10px);pointer-events:none}
+.auth-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px;animation:fadeLift .52s .08s cubic-bezier(.2,.86,.2,1) both}
+.auth-mode{border:1px solid color-mix(in oklab,var(--accent2) 30%,var(--line));border-radius:999px;padding:7px 11px;background:color-mix(in oklab,var(--accent2) 9%,var(--surface));font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2)}
+.auth-brand{text-align:left;margin-bottom:18px;animation:fadeLift .54s .16s cubic-bezier(.2,.86,.2,1) both}.auth-brand .logo{width:58px;height:58px;margin:0 0 14px;font-size:1.3rem}.auth-brand h1{font-size:1.7rem;margin:0 0 6px;color:var(--text);letter-spacing:-.04em}.auth-brand p{color:var(--muted);font-size:.9rem;margin:0}
+.auth-form{display:grid;gap:14px}
+.auth-field{position:relative;margin:0;animation:fadeLift .56s cubic-bezier(.2,.86,.2,1) both}.auth-field:nth-of-type(1){animation-delay:.22s}.auth-field:nth-of-type(2){animation-delay:.3s}.auth-field:nth-of-type(3){animation-delay:.38s}
+.auth-field label{display:block;font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.09em}
+.auth-field::after{content:"";position:absolute;left:14px;right:14px;bottom:2px;height:1px;background:linear-gradient(90deg,transparent,color-mix(in oklab,var(--accent) 65%,transparent),transparent);opacity:0;transform:scaleX(.4);transition:opacity .24s ease,transform .24s ease}
+.auth-field:focus-within::after{opacity:1;transform:scaleX(1)}
+.auth-field input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:14px;background:color-mix(in oklab,var(--bg) 84%,white 16%);color:var(--text);font-size:.96rem;font-family:inherit;outline:none;transition:border-color .22s ease,box-shadow .22s ease,transform .22s ease,background .22s ease}.auth-field input:focus{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in oklab,var(--accent) 16%,transparent),0 0 20px color-mix(in oklab,var(--accent) 12%,transparent);transform:translateY(-1px);background:color-mix(in oklab,var(--surface) 90%,white 10%)}
+.auth-field.is-revealed{animation:authReveal .34s cubic-bezier(.2,.9,.2,1) both}
+.auth-card .btn.primary{width:100%;padding:13px;font-size:1rem;margin-top:4px;animation:fadeLift .58s .42s cubic-bezier(.2,.86,.2,1) both}
+.auth-toggle{text-align:center;margin-top:2px;font-size:.86rem;color:var(--muted);animation:fadeLift .58s .48s cubic-bezier(.2,.86,.2,1) both}.auth-toggle a{color:var(--accent);text-decoration:none;font-weight:700;cursor:pointer}.auth-toggle a:hover{text-decoration:underline}
+.auth-error{color:var(--warn);font-size:.84rem;text-align:center;min-height:1.2em;margin:0;animation:fadeLift .58s .54s cubic-bezier(.2,.86,.2,1) both}
+.auth-error:not(:empty){animation:authError .32s ease,fadeLift .58s .54s cubic-bezier(.2,.86,.2,1) both}
 .user-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;margin:0 0 8px;border-radius:10px;background:color-mix(in oklab,var(--accent) 8%,transparent);font-size:.82rem;color:var(--muted)}.user-bar span{font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes authCardIn{from{opacity:0;transform:translateY(24px) scale(.965) rotateX(8deg)}to{opacity:1;transform:translateY(0) scale(1) rotateX(0)}}
+@keyframes authCardSwap{from{transform:translateY(0) scale(1)}50%{transform:translateY(-4px) scale(1.012)}to{transform:translateY(0) scale(1)}}
+@keyframes authHeroIn{from{opacity:0;transform:translateX(-28px) scale(.985)}to{opacity:1;transform:translateX(0) scale(1)}}
+@keyframes authHeroShift{from{transform:translateX(0) scale(1)}50%{transform:translateX(-4px) scale(1.01)}to{transform:translateX(0) scale(1)}}
+@keyframes authTrackFloat{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}
+@keyframes authDotPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in oklab,var(--accent) 26%,transparent)}50%{box-shadow:0 0 0 10px color-mix(in oklab,var(--accent) 0%,transparent)}}
+@keyframes authOrbA{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(5vw,3vh,0) scale(1.08)}}
+@keyframes authOrbB{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-4vw,-3vh,0) scale(1.06)}}
+@keyframes authPulse{0%,100%{transform:scale(1);opacity:.72}50%{transform:scale(1.14);opacity:1}}
+@keyframes authReveal{from{opacity:0;transform:translateY(10px);max-height:0}to{opacity:1;transform:translateY(0);max-height:120px}}
+@keyframes authError{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media (max-width:920px){.auth-shell{grid-template-columns:1fr}.auth-hero{min-height:unset;padding:26px}.auth-preview{grid-template-columns:1fr}.auth-card{max-width:none}}
+@media (max-width:640px){.auth-screen{padding:14px}.auth-hero{padding:22px;border-radius:24px}.auth-copy h2{font-size:2.2rem}.auth-metrics{grid-template-columns:1fr}.auth-card{padding:22px}.auth-top{margin-bottom:16px}}
 </style>
 </head>
 <body data-theme="light">
-<div id="auth" class="auth-screen">
-  <div class="auth-card">
-    <div class="auth-brand"><div class="logo">TF</div><h1>TaskFlow Pro</h1><p>Advanced productivity cockpit</p></div>
-    <form id="auth-form" autocomplete="on">
-      <div class="auth-field"><label for="auth-user">Username</label><input id="auth-user" type="text" required minlength="2" maxlength="32" autocomplete="username" /></div>
-      <div class="auth-field"><label for="auth-pass">Password</label><input id="auth-pass" type="password" required minlength="4" maxlength="128" autocomplete="current-password" /></div>
-      <div id="auth-confirm-wrap" class="auth-field" style="display:none"><label for="auth-confirm">Confirm Password</label><input id="auth-confirm" type="password" minlength="4" maxlength="128" autocomplete="new-password" /></div>
-      <button type="submit" class="btn primary" id="auth-submit">Log In</button>
-      <p class="auth-toggle" id="auth-toggle-text"></p>
-      <p id="auth-error" class="auth-error"></p>
-    </form>
+<div id="auth" class="auth-screen mode-login">
+  <div class="auth-shell">
+    <section class="auth-hero" aria-hidden="true">
+      <div class="auth-copy">
+        <span class="auth-kicker">Focused Execution</span>
+        <h2>Move from backlog fog to deliberate momentum.</h2>
+        <p>Track priority, time windows, and progress in a workspace that feels alive the moment you sign in.</p>
+      </div>
+      <div class="auth-metrics">
+        <div class="auth-metric"><b>4</b><span>Views in sync</span></div>
+        <div class="auth-metric"><b>24h</b><span>Schedule awareness</span></div>
+        <div class="auth-metric"><b>∞</b><span>Flow states</span></div>
+      </div>
+      <div class="auth-preview">
+        <div class="auth-track"><span class="pulse"></span><div><strong>Priority stays visible</strong><small>Critical work surfaces first.</small></div></div>
+        <div class="auth-track"><span class="pulse"></span><div><strong>Time windows stay active</strong><small>Know what needs attention now.</small></div></div>
+        <div class="auth-track"><span class="pulse"></span><div><strong>Views transition cleanly</strong><small>List, kanban, calendar, analytics.</small></div></div>
+      </div>
+    </section>
+    <div class="auth-card">
+      <div class="auth-top"><span class="auth-mode" id="auth-mode">Log In</span></div>
+      <div class="auth-brand"><div class="logo">TF</div><h1>TaskFlow Pro</h1><p>Advanced productivity cockpit</p></div>
+      <form id="auth-form" class="auth-form" autocomplete="on">
+        <div class="auth-field"><label for="auth-user">Username</label><input id="auth-user" type="text" required minlength="2" maxlength="32" autocomplete="username" /></div>
+        <div class="auth-field"><label for="auth-pass">Password</label><input id="auth-pass" type="password" required minlength="4" maxlength="128" autocomplete="current-password" /></div>
+        <div id="auth-confirm-wrap" class="auth-field" hidden><label for="auth-confirm">Confirm Password</label><input id="auth-confirm" type="password" minlength="4" maxlength="128" autocomplete="new-password" /></div>
+        <button type="submit" class="btn primary" id="auth-submit">Log In</button>
+        <p class="auth-toggle" id="auth-toggle-text"></p>
+        <p id="auth-error" class="auth-error"></p>
+      </form>
+    </div>
   </div>
 </div>
 <div class="app" style="display:none">
@@ -284,20 +348,38 @@ function setSession(u){localStorage.setItem(SESSION_KEY,u);}
 function clearSession(){localStorage.removeItem(SESSION_KEY);}
 
 function showAuth(){
-document.getElementById('auth').classList.remove('hidden');
+const auth=document.getElementById('auth');
+auth.classList.remove('hidden');
 document.querySelector('.app').style.display='none';
 let mode='login';
-const form=document.getElementById('auth-form'),errEl=document.getElementById('auth-error'),cw=document.getElementById('auth-confirm-wrap'),sub=document.getElementById('auth-submit'),tt=document.getElementById('auth-toggle-text');
-function upd(){
-if(mode==='register'){cw.style.display='';sub.textContent='Sign Up';tt.innerHTML=`Already have an account? <a id="auth-switch">Log in</a>`;}
-else{cw.style.display='none';sub.textContent='Log In';tt.innerHTML=`Don't have an account? <a id="auth-switch">Sign up</a>`;}
+const form=document.getElementById('auth-form'),errEl=document.getElementById('auth-error'),cw=document.getElementById('auth-confirm-wrap'),sub=document.getElementById('auth-submit'),tt=document.getElementById('auth-toggle-text'),modeEl=document.getElementById('auth-mode'),userEl=document.getElementById('auth-user'),passEl=document.getElementById('auth-pass'),confirmEl=document.getElementById('auth-confirm');
+function applyMode(nextMode){
+mode=nextMode;
+auth.classList.remove('mode-login','mode-register');
+auth.classList.add(mode==='register'?'mode-register':'mode-login');
+modeEl.textContent=mode==='register'?'Sign Up':'Log In';
+sub.textContent=mode==='register'?'Create Account':'Log In';
+tt.innerHTML=mode==='register'?`Already have an account? <a id="auth-switch">Log in</a>`:`Don't have an account? <a id="auth-switch">Sign up</a>`;
 errEl.textContent='';
-document.getElementById('auth-switch').onclick=e=>{e.preventDefault();mode=mode==='login'?'register':'login';upd();};
+if(mode==='register'){
+cw.hidden=false;
+cw.classList.remove('is-revealed');
+void cw.offsetWidth;
+cw.classList.add('is-revealed');
+confirmEl.setAttribute('required','required');
+}else{
+cw.hidden=true;
+cw.classList.remove('is-revealed');
+confirmEl.removeAttribute('required');
+confirmEl.value='';
 }
-upd();
+document.getElementById('auth-switch').onclick=e=>{e.preventDefault();applyMode(mode==='login'?'register':'login');requestAnimationFrame(()=>mode==='register'?confirmEl.focus():userEl.focus());};
+}
+applyMode('login');
+requestAnimationFrame(()=>userEl.focus());
 form.onsubmit=e=>{
 e.preventDefault();
-const user=document.getElementById('auth-user').value.trim().toLowerCase(),pass=document.getElementById('auth-pass').value,conf=document.getElementById('auth-confirm').value;
+const user=userEl.value.trim().toLowerCase(),pass=passEl.value,conf=confirmEl.value;
 if(!user||!pass){errEl.textContent='Please fill in all fields.';return;}
 if(user.length<2){errEl.textContent='Username must be at least 2 characters.';return;}
 const users=getUsers(),h=hashPwd(pass);
