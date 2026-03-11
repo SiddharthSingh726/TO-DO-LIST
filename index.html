@@ -198,12 +198,35 @@ input:focus,select:focus,.field:focus,textarea:focus{border-color:var(--accent);
 @media (max-width:1120px){.row{grid-template-columns:1fr .8fr .8fr .8fr}.hide-md{display:none}.cal,.charts{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:920px){.app{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--line)}.kgrid{grid-template-columns:1fr}.panel{min-height:auto}}
 @media (max-width:640px){main{padding:12px}.row{grid-template-columns:1fr}.hide-sm{display:none}.fg{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.ctop{grid-template-columns:auto 1fr}.cact{grid-column:1/-1;justify-content:flex-start}}
+.auth-screen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 10% 10%,rgba(233,120,66,.2),transparent 28%),radial-gradient(circle at 90% 90%,rgba(13,122,132,.23),transparent 30%),var(--bg);background-size:180% 180%;animation:bgDrift 26s ease-in-out infinite}.auth-screen.hidden{display:none}
+.auth-card{background:var(--surface);border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.auth-brand{text-align:center;margin-bottom:28px}.auth-brand .logo{width:56px;height:56px;margin:0 auto 12px;font-size:1.3rem}.auth-brand h1{font-size:1.5rem;margin:0 0 4px;color:var(--text)}.auth-brand p{color:var(--muted);font-size:.85rem;margin:0}
+.auth-field{margin-bottom:16px}.auth-field label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.auth-field input{width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:.95rem;font-family:inherit;outline:none;transition:border-color .2s}.auth-field input:focus{border-color:var(--accent)}
+.auth-card .btn.primary{width:100%;padding:12px;font-size:1rem;margin-top:8px}
+.auth-toggle{text-align:center;margin-top:16px;font-size:.85rem;color:var(--muted)}.auth-toggle a{color:var(--accent);text-decoration:none;font-weight:600;cursor:pointer}.auth-toggle a:hover{text-decoration:underline}
+.auth-error{color:var(--warn);font-size:.84rem;text-align:center;margin-top:12px;min-height:1.2em}
+.user-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;margin:0 0 8px;border-radius:10px;background:color-mix(in oklab,var(--accent) 8%,transparent);font-size:.82rem;color:var(--muted)}.user-bar span{font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body data-theme="light">
-<div class="app">
+<div id="auth" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand"><div class="logo">TF</div><h1>TaskFlow Pro</h1><p>Advanced productivity cockpit</p></div>
+    <form id="auth-form" autocomplete="on">
+      <div class="auth-field"><label for="auth-user">Username</label><input id="auth-user" type="text" required minlength="2" maxlength="32" autocomplete="username" /></div>
+      <div class="auth-field"><label for="auth-pass">Password</label><input id="auth-pass" type="password" required minlength="4" maxlength="128" autocomplete="current-password" /></div>
+      <div id="auth-confirm-wrap" class="auth-field" style="display:none"><label for="auth-confirm">Confirm Password</label><input id="auth-confirm" type="password" minlength="4" maxlength="128" autocomplete="new-password" /></div>
+      <button type="submit" class="btn primary" id="auth-submit">Log In</button>
+      <p class="auth-toggle" id="auth-toggle-text"></p>
+      <p id="auth-error" class="auth-error"></p>
+    </form>
+  </div>
+</div>
+<div class="app" style="display:none">
   <aside class="sidebar">
     <div class="brand"><div style="display:flex;gap:9px;align-items:center"><div class="logo">TF</div><div class="txt"><h1>TaskFlow Pro</h1><p>Advanced productivity cockpit</p></div></div><button class="mini" data-a="theme">Theme</button></div>
+    <div id="user-bar" class="user-bar"><span id="user-name"></span><button class="mini" data-a="logout">Logout</button></div>
     <div id="views" class="views"></div>
     <div><div class="hdr"><h3>Projects</h3><button class="chip" data-a="new-project">+ Project</button></div><div id="projects" class="list"></div></div>
     <div><div class="hdr"><h3>Tags</h3><button class="chip" data-a="new-tag">+ Tag</button></div><div id="tags" class="list"></div></div>
@@ -240,7 +263,7 @@ input:focus,select:focus,.field:focus,textarea:focus{border-color:var(--accent);
 <script>
 (()=>{
 'use strict';
-const KEY='taskflow_state_v2',MAX_HISTORY=80;
+let KEY='taskflow_state_v2';const MAX_HISTORY=80,USERS_KEY='taskflow_users',SESSION_KEY='taskflow_session';
 const views=[['list','List'],['kanban','Kanban'],['calendar','Calendar'],['analytics','Analytics']];
 const statuses=[['todo','Todo'],['in-progress','In Progress'],['done','Done']];
 const priRank={low:1,medium:2,high:3,critical:4};
@@ -248,12 +271,64 @@ let dragId=null;
 const reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $=s=>document.querySelector(s);
 const refs={views:$('#views'),projects:$('#projects'),tags:$('#tags'),search:$('#search'),fs:$('#f-status'),fp:$('#f-priority'),fproj:$('#f-project'),fd:$('#f-date'),ftime:$('#f-time'),sort:$('#sort'),sel:$('#sel'),root:$('#root'),modal:$('#modal'),toasts:$('#toasts'),imp:$('#import-file')};
-let state=norm(load());
-let lastView=state.view;
+let state;
+let lastView;
 let pendingViewDir='forward';
 let calendarShift=0;
+
+function hashPwd(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);}return(h>>>0).toString(36);}
+function getUsers(){try{return JSON.parse(localStorage.getItem(USERS_KEY)||'{}');}catch{return {};}}
+function saveUsers(u){localStorage.setItem(USERS_KEY,JSON.stringify(u));}
+function getSession(){return localStorage.getItem(SESSION_KEY)||'';}
+function setSession(u){localStorage.setItem(SESSION_KEY,u);}
+function clearSession(){localStorage.removeItem(SESSION_KEY);}
+
+function showAuth(){
+document.getElementById('auth').classList.remove('hidden');
+document.querySelector('.app').style.display='none';
+let mode='login';
+const form=document.getElementById('auth-form'),errEl=document.getElementById('auth-error'),cw=document.getElementById('auth-confirm-wrap'),sub=document.getElementById('auth-submit'),tt=document.getElementById('auth-toggle-text');
+function upd(){
+if(mode==='register'){cw.style.display='';sub.textContent='Sign Up';tt.innerHTML=`Already have an account? <a id="auth-switch">Log in</a>`;}
+else{cw.style.display='none';sub.textContent='Log In';tt.innerHTML=`Don't have an account? <a id="auth-switch">Sign up</a>`;}
+errEl.textContent='';
+document.getElementById('auth-switch').onclick=e=>{e.preventDefault();mode=mode==='login'?'register':'login';upd();};
+}
+upd();
+form.onsubmit=e=>{
+e.preventDefault();
+const user=document.getElementById('auth-user').value.trim().toLowerCase(),pass=document.getElementById('auth-pass').value,conf=document.getElementById('auth-confirm').value;
+if(!user||!pass){errEl.textContent='Please fill in all fields.';return;}
+if(user.length<2){errEl.textContent='Username must be at least 2 characters.';return;}
+const users=getUsers(),h=hashPwd(pass);
+if(mode==='register'){
+if(pass.length<4){errEl.textContent='Password must be at least 4 characters.';return;}
+if(pass!==conf){errEl.textContent='Passwords do not match.';return;}
+if(users[user]){errEl.textContent='Username already taken.';return;}
+users[user]={hash:h};saveUsers(users);setSession(user);initApp();
+}else{
+if(!users[user]){errEl.textContent='User not found.';return;}
+if(users[user].hash!==h){errEl.textContent='Incorrect password.';return;}
+setSession(user);initApp();
+}
+};
+}
+
+function initApp(){
+const s=getSession();
+KEY='taskflow_state_v2_'+s;
+document.getElementById('auth').classList.add('hidden');
+document.querySelector('.app').style.display='';
+const un=document.getElementById('user-name');
+if(un)un.textContent=s;
+state=norm(load());
+lastView=state.view;
 if(genRecurring())save();
 bind();render();initAurora();
+}
+
+const session=getSession(),users=getUsers();
+if(session&&users[session]){initApp();}else{clearSession();showAuth();}
 
 function bind(){
 document.addEventListener('click',onClick);document.addEventListener('input',onInput);document.addEventListener('change',onChange);document.addEventListener('keydown',onKey);
@@ -269,6 +344,7 @@ function queueViewTransition(nextView){pendingViewDir=viewDirection(state.view,n
 function clearDropHot(){document.querySelectorAll('.col.drop-hot').forEach(z=>z.classList.remove('drop-hot'));}
 function onClick(e){const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;switch(a){
 case 'theme':setState(s=>s.theme=s.theme==='dark'?'light':'dark',{record:false});break;
+case 'logout':clearSession();location.reload();break;
 case 'view':{const next=b.dataset.v;if(!next||next===state.view)break;queueViewTransition(next);calendarShift=0;setState(s=>s.view=next,{record:false});break;}
 case 'new-task':taskModal();break;
 case 'edit-task':taskModal(b.dataset.id);break;
