@@ -34,8 +34,7 @@ git push -u origin main
 This creates:
 
 - Node web service
-- Persistent disk mounted at `/var/data`
-- `DB_FILE=/var/data/taskflow-db.json` for shared user/state storage
+- `DB_FILE=/tmp/taskflow-db.json` for runtime user/state storage on free tier
 
 ### 3. Verify
 
@@ -49,4 +48,5 @@ After deployment, open your Render URL and test:
 
 - Deploying only static [index.html](index.html) on GitHub Pages will **not** run [server.js](server.js), so shared login will not work there.
 - Keeping frontend + backend on the same Render service avoids CORS issues.
-- The persistent disk is required so users/data survive restarts and new deploys.
+- Render free tier does not support disks, so data stored in `/tmp` is ephemeral and can reset after redeploy/restart.
+- If you need persistent data on free plans, use an external database service and move user/task storage from file to DB.
