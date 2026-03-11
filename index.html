@@ -327,7 +327,7 @@ input:focus,select:focus,.field:focus,textarea:focus{border-color:var(--accent);
 <script>
 (()=>{
 'use strict';
-let KEY='taskflow_state_v2';const MAX_HISTORY=80,USERS_KEY='taskflow_users',SESSION_KEY='taskflow_session';
+let KEY='taskflow_state_v2';const MAX_HISTORY=80,USERS_KEY='taskflow_users',SESSION_KEY='taskflow_session',REMOTE_SYNC_DELAY=700;
 const views=[['list','List'],['kanban','Kanban'],['calendar','Calendar'],['analytics','Analytics']];
 const statuses=[['todo','Todo'],['in-progress','In Progress'],['done','Done']];
 const priRank={low:1,medium:2,high:3,critical:4};
@@ -339,6 +339,10 @@ let state;
 let lastView;
 let pendingViewDir='forward';
 let calendarShift=0;
+let activeUser='';
+let syncTimer=0;
+let syncInFlight=false;
+let syncPending=false;
 
 function hashPwd(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);}return(h>>>0).toString(36);}
 function getUsers(){try{return JSON.parse(localStorage.getItem(USERS_KEY)||'{}');}catch{return {};}}
@@ -346,6 +350,23 @@ function saveUsers(u){localStorage.setItem(USERS_KEY,JSON.stringify(u));}
 function getSession(){return localStorage.getItem(SESSION_KEY)||'';}
 function setSession(u){localStorage.setItem(SESSION_KEY,u);}
 function clearSession(){localStorage.removeItem(SESSION_KEY);}
+function canUseSharedApi(){return location.protocol==='http:'||location.protocol==='https:';}
+function cacheUser(user,hash){const users=getUsers();users[user]={hash};saveUsers(users);}
+async function apiReq(path,opt={}){const headers=Object.assign({},opt.headers||{});if(opt.body&&!headers['Content-Type'])headers['Content-Type']='application/json';const res=await fetch(path,Object.assign({},opt,{headers}));const txt=await res.text();let data={};if(txt){try{data=JSON.parse(txt);}catch{data={error:txt};}}if(!res.ok){const err=new Error(data.error||`Request failed (${res.status})`);err.code=res.status;throw err;}return data;}
+async function apiRegister(user,hash){return apiReq('/api/register',{method:'POST',body:JSON.stringify({user,hash})});}
+async function apiLogin(user,hash){return apiReq('/api/login',{method:'POST',body:JSON.stringify({user,hash})});}
+async function apiUserExists(user){const data=await apiReq(`/api/user-exists?user=${encodeURIComponent(user)}`);return !!data.exists;}
+async function apiLoadState(user){const data=await apiReq(`/api/state/${encodeURIComponent(user)}`);return data&&data.state?data.state:null;}
+async function apiSaveState(user,nextState){return apiReq(`/api/state/${encodeURIComponent(user)}`,{method:'PUT',body:JSON.stringify({state:nextState})});}
+async function registerUser(user,hash){const users=getUsers();if(users[user])return{ok:false,msg:'Username already taken.'};if(canUseSharedApi()){try{await apiRegister(user,hash);}catch(err){if(err.code===409)return{ok:false,msg:'Username already taken.'};}}cacheUser(user,hash);return{ok:true};}
+async function loginUser(user,hash){if(canUseSharedApi()){try{await apiLogin(user,hash);cacheUser(user,hash);return{ok:true};}catch(err){if(err.code===401)return{ok:false,msg:'Incorrect password.'};if(err.code===404&&/user not found/i.test(err.message)){const users=getUsers();if(users[user]&&users[user].hash===hash){try{await apiRegister(user,hash);}catch(syncErr){if(syncErr.code!==409){}}cacheUser(user,hash);return{ok:true};}return{ok:false,msg:'User not found.'};}}}
+const users=getUsers();if(!users[user])return{ok:false,msg:'User not found.'};if(users[user].hash!==hash)return{ok:false,msg:'Incorrect password.'};return{ok:true};}
+async function userExists(user){if(!user)return false;if(canUseSharedApi()){try{if(await apiUserExists(user))return true;}catch{}}
+const users=getUsers();return !!users[user];}
+async function loadInitialState(user){const local=norm(load());if(canUseSharedApi()){try{const remote=await apiLoadState(user);if(remote){localStorage.setItem(KEY,JSON.stringify(remote));return norm(remote);}}catch{}}
+return local;}
+function queueRemoteSync(immediate=false){if(!canUseSharedApi()||!activeUser||!state)return;if(syncInFlight){syncPending=true;return;}if(immediate){void runRemoteSync();return;}clearTimeout(syncTimer);syncTimer=setTimeout(()=>{void runRemoteSync();},REMOTE_SYNC_DELAY);}
+async function runRemoteSync(){if(!canUseSharedApi()||!activeUser||!state)return;if(syncInFlight){syncPending=true;return;}syncInFlight=true;try{await apiSaveState(activeUser,state);}catch{}finally{syncInFlight=false;if(syncPending){syncPending=false;void runRemoteSync();}}}
 
 function showAuth(){
 const auth=document.getElementById('auth');
@@ -377,40 +398,47 @@ document.getElementById('auth-switch').onclick=e=>{e.preventDefault();applyMode(
 }
 applyMode('login');
 requestAnimationFrame(()=>userEl.focus());
-form.onsubmit=e=>{
+form.onsubmit=async e=>{
 e.preventDefault();
 const user=userEl.value.trim().toLowerCase(),pass=passEl.value,conf=confirmEl.value;
 if(!user||!pass){errEl.textContent='Please fill in all fields.';return;}
 if(user.length<2){errEl.textContent='Username must be at least 2 characters.';return;}
-const users=getUsers(),h=hashPwd(pass);
+const h=hashPwd(pass);
+sub.disabled=true;
+try{
 if(mode==='register'){
 if(pass.length<4){errEl.textContent='Password must be at least 4 characters.';return;}
 if(pass!==conf){errEl.textContent='Passwords do not match.';return;}
-if(users[user]){errEl.textContent='Username already taken.';return;}
-users[user]={hash:h};saveUsers(users);setSession(user);initApp();
+const reg=await registerUser(user,h);
+if(!reg.ok){errEl.textContent=reg.msg||'Could not create account.';return;}
+setSession(user);
+await initApp();
 }else{
-if(!users[user]){errEl.textContent='User not found.';return;}
-if(users[user].hash!==h){errEl.textContent='Incorrect password.';return;}
-setSession(user);initApp();
+const login=await loginUser(user,h);
+if(!login.ok){errEl.textContent=login.msg||'Login failed.';return;}
+setSession(user);
+await initApp();
 }
+}finally{sub.disabled=false;}
 };
 }
 
-function initApp(){
+async function initApp(){
 const s=getSession();
+activeUser=s;
 KEY='taskflow_state_v2_'+s;
 document.getElementById('auth').classList.add('hidden');
 document.querySelector('.app').style.display='';
 const un=document.getElementById('user-name');
 if(un)un.textContent=s;
-state=norm(load());
+state=await loadInitialState(s);
 lastView=state.view;
 if(genRecurring())save();
 bind();render();initAurora();
+queueRemoteSync();
 }
 
-const session=getSession(),users=getUsers();
-if(session&&users[session]){initApp();}else{clearSession();showAuth();}
+(async()=>{const session=getSession();if(session&&await userExists(session)){await initApp();}else{clearSession();showAuth();}})();
 
 function bind(){
 document.addEventListener('click',onClick);document.addEventListener('input',onInput);document.addEventListener('change',onChange);document.addEventListener('keydown',onKey);
@@ -484,7 +512,7 @@ function initAurora(){if(reduceMotion)return;const container=document.createElem
 function injectGlowFills(){if(reduceMotion)return;const sel='.toolbar,.col,.day,.side,.stat,.chart,.entity .main,.hint,.tags,.subedit,.subline';document.querySelectorAll(sel).forEach(el=>{if(el.querySelector('.glow-fill'))return;const g=document.createElement('div');g.className='glow-fill';el.prepend(g);});}
 
 function load(){try{const raw=localStorage.getItem(KEY);return raw?JSON.parse(raw):seed();}catch{return seed();}}
-function save(){localStorage.setItem(KEY,JSON.stringify(state));}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));queueRemoteSync();}
 function clone(v){return typeof structuredClone==='function'?structuredClone(v):JSON.parse(JSON.stringify(v));}
 function id(p){return `${p}_${Math.random().toString(36).slice(2,7)}_${Date.now().toString(36).slice(-5)}`;}
 function today(){return dateStr(new Date());}

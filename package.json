@@ -1,0 +1,14 @@
+{
+  "name": "taskflow-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TaskFlow Pro with shared auth and state sync",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
